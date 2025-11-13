@@ -1,0 +1,72 @@
+services:
+  # App Laravel (PHP + Nginx)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile  # Veja abaixo
+    container_name: laravel_app
+    volumes:
+      - .:/var/www/html
+    ports:
+      - "8000:80"
+    environment:
+      - DB_CONNECTION=pgsql
+      - DB_HOST=master-db
+      - DB_PORT=5432
+      - DB_DATABASE=laravel_db
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=secret
+      # Para reads: Configurado no config/database.php
+    depends_on:
+      - master-db
+      - slave-db
+    networks:
+      - laravel_net
+
+  # PostgreSQL Master (Write)
+  master-db:
+    image: postgres:16
+    container_name: postgres_master
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: laravel_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - ./postgres-master/data:/var/lib/postgresql/data
+      - ./postgres-master/init.sql:/docker-entrypoint-initdb.d/init.sql  # Scripts de init (veja abaixo)
+      - ./postgres-master/postgresql.conf:/etc/postgresql/postgresql.conf  # Config master
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    networks:
+      - laravel_net
+
+  # PostgreSQL Slave (Read-Only)
+  slave-db:
+    image: postgres:16
+    container_name: postgres_slave
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: laravel_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - ./postgres-slave/data:/var/lib/postgresql/data
+      - ./postgres-slave/init-replica.sh:/docker-entrypoint-initdb.d/init-replica.sh  # Script de replicação
+      - ./postgres-slave/postgresql.conf:/etc/postgresql/postgresql.conf  # Config slave
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    depends_on:
+      - master-db
+    networks:
+      - laravel_net
+
+volumes:
+  postgres-master-data:
+  postgres-slave-data:
+
+networks:
+  laravel_net:
+    driver: bridge
