@@ -38,6 +38,7 @@ services:
       - ./postgres-master/data:/var/lib/postgresql/data
       - ./postgres-master/init.sql:/docker-entrypoint-initdb.d/init.sql  # Scripts de init (veja abaixo)
       - ./postgres-master/postgresql.conf:/etc/postgresql/postgresql.conf  # Config master
+      - ./postgres-master/configure-replication.sh:/docker-entrypoint-initdb.d/configure-replication.sh  # Config replicação
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
     networks:
       - laravel_net
