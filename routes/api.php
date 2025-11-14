@@ -22,4 +22,5 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // Rotas para gerenciar pessoas
 Route::get('/persons', [PersonController::class, 'index']);
 Route::get('/persons/sample', [PersonController::class, 'sample']);
+Route::get('/persons/clear', [PersonController::class, 'clear']);
 Route::post('/persons', [PersonController::class, 'store']);

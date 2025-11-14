@@ -76,20 +76,20 @@ return [
             'prefix_indexes' => true,
             'schema' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
-            // Comentado temporariamente até a replicação estar funcionando
-            // 'read' => [
-            //     'host' => [
-            //         env('DB_READ_HOST', 'slave-db'),
-            //     ],
-            //     'port' => env('DB_READ_PORT', '5432'),
-            // ],
-            // 'write' => [
-            //     'host' => [
-            //         env('DB_HOST', 'master-db'),
-            //     ],
-            //     'port' => env('DB_PORT', '5432'),
-            // ],
-            // 'sticky' => true,
+            'read' => [
+                'host' => array_filter(explode(',', env('DB_READ_HOSTS', env('DB_READ_HOST', 'slave-db')))),
+                'port' => env('DB_READ_PORT', env('DB_PORT', '5432')),
+                'database' => env('DB_READ_DATABASE', env('DB_DATABASE', 'laravel_db')),
+                'username' => env('DB_READ_USERNAME', env('DB_USERNAME', 'postgres')),
+                'password' => env('DB_READ_PASSWORD', env('DB_PASSWORD', 'secret')),
+            ],
+            'write' => [
+                'host' => [
+                    env('DB_HOST', 'master-db'),
+                ],
+                'port' => env('DB_PORT', '5432'),
+            ],
+            'sticky' => env('DB_STICKY', true),
         ],
         'sqlsrv' => [
             'driver' => 'sqlsrv',

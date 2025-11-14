@@ -23,17 +23,27 @@ class PersonController extends Controller
 
     public function sample(Request $request): JsonResponse
     {
-        $person = Person::create([
-            'nome' => 'teste',
-            'telefone' => '123',
-        ]);
+        $count = (int) $request->query('count', 5);
+        $count = max(1, min($count, 50));
+
+        $persons = Person::factory()->count($count)->create();
 
         return response()->json([
             'success' => true,
-            'message' => 'Pessoa cadastrada com sucesso',
-            'data' => $person
+            'message' => 'Registros de exemplo gerados e persistidos no banco',
+            'data' => $persons,
         ], 201);
-    }    
+    }
+
+    public function clear(Request $request): JsonResponse
+    {
+        Person::truncate();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pessoas removidas com sucesso',
+        ], 200);
+    }        
 
     /**
      * Cadastra uma nova pessoa

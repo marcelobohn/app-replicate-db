@@ -67,6 +67,8 @@ Aplicação Laravel 11 que expõe um pequeno CRUD de pessoas e demonstra replica
 | GET    | `/`            | Tela padrão do Laravel                   |
 | GET    | `/hello`       | Endpoint de teste “Hello World”          |
 | GET    | `/api/persons` | Lista de pessoas em JSON                 |
+| GET    | `/api/persons/sample` | Retorna alguns registros fake usando a factory (não persiste) |
+| GET    | `/api/persons/clear` | Remove todas as pessoas cadastradas |
 | POST   | `/api/persons` | Cria pessoa `{ "nome": "...", "telefone": "..." }` |
 
 Exemplo:
@@ -76,6 +78,8 @@ curl http://localhost:8000/api/persons
 curl -X POST http://localhost:8000/api/persons \
      -H "Content-Type: application/json" \
      -d '{"nome":"Maria","telefone":"(11) 99999-0000"}'
+curl http://localhost:8000/api/persons/sample
+curl http://localhost:8000/api/persons/clear
 ```
 
 ## Replicação PostgreSQL
