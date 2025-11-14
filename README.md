@@ -1,66 +1,146 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# App Replicate DB
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplicação Laravel 11 que expõe um pequeno CRUD de pessoas e demonstra replicação física do PostgreSQL (master/slave) usando Docker. O projeto nasceu para experimentar:
 
-## About Laravel
+- Como configurar uma aplicação Laravel para ler/escrever em bancos diferentes.
+- Como orquestrar PostgreSQL master/slave + app PHP em `docker-compose`.
+- Como garantir que migrations e testes mantenham o schema consistente.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- PHP 8.3 + Laravel 11
+- PostgreSQL 16 (master/slave)
+- Docker / Docker Compose
+- PHPUnit
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Pré-requisitos
 
-## Learning Laravel
+| Ferramenta     | Versão sugerida |
+|----------------|-----------------|
+| Docker         | 24+             |
+| Docker Compose | 2.20+           |
+| Make (opcional)| qualquer        |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Configuração rápida
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+1. **Clone o repositório**  
+   ```bash
+   git clone <repo> app-replicate-db && cd app-replicate-db
+   ```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+2. **Configure variáveis**  
+   ```bash
+   cp .env.example .env
+   # Ajuste credenciais se necessário (por padrão master/slave usam user postgres / secret)
+   ```
 
-## Laravel Sponsors
+3. **Monte os contêineres**  
+   ```bash
+   docker-compose build app
+   docker-compose up -d
+   ```
+   O `dockerfile` instala PHP-FPM + Nginx, dependências do Laravel e configura o virtual host.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+4. **Rode as migrations no master**  
+   ```bash
+   docker-compose exec app php artisan migrate
+   ```
 
-### Premium Partners
+5. **(Opcional) Popular dados via factory**  
+   ```bash
+   docker-compose exec app php artisan tinker
+   >>> App\Models\Person::factory()->count(3)->create();
+   ```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+## Serviços
 
-## Contributing
+| Serviço      | Porta host | Porta container | Observações                              |
+|--------------|------------|-----------------|------------------------------------------|
+| app          | 8000       | 80              | Nginx servindo Laravel                   |
+| master-db    | 5432       | 5432            | PostgreSQL para escrita/migrations       |
+| slave-db     | 5433       | 5432            | PostgreSQL read-only (replicação física) |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Endpoints principais
 
-## Code of Conduct
+| Método | Rota           | Descrição                                |
+|--------|----------------|-------------------------------------------|
+| GET    | `/`            | Tela padrão do Laravel                   |
+| GET    | `/hello`       | Endpoint de teste “Hello World”          |
+| GET    | `/api/persons` | Lista de pessoas em JSON                 |
+| POST   | `/api/persons` | Cria pessoa `{ "nome": "...", "telefone": "..." }` |
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Exemplo:
 
-## Security Vulnerabilities
+```bash
+curl http://localhost:8000/api/persons
+curl -X POST http://localhost:8000/api/persons \
+     -H "Content-Type: application/json" \
+     -d '{"nome":"Maria","telefone":"(11) 99999-0000"}'
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Replicação PostgreSQL
 
-## License
+- **Master** (`postgres_master`) usa `wal_level=replica`, cria um usuário `replicator` e o replication slot `replication_slot`.
+- **Slave** (`postgres_slave`) executa `postgres-slave/init-replica.sh`, que:
+  1. Aguarda o master responder.
+  2. Faz `pg_basebackup` completo para `/var/lib/postgresql/data`.
+  3. Cria `standby.signal`, configura `primary_conninfo` e `primary_slot_name`.
+  4. Inicia o PostgreSQL em hot-standby.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Quando o master recebe `php artisan migrate` ou inserts via API, os WALs são enviados para o slave automaticamente.
+
+### Como verificar se replicação está ativa
+
+```bash
+# Master: veja as tabelas e o slot
+docker-compose exec master-db psql -U postgres -d laravel_db -c "\dt persons"
+docker-compose exec master-db psql -U postgres -d laravel_db -c "SELECT slot_name, active FROM pg_replication_slots;"
+
+# Slave: precisa listar a mesma tabela
+docker-compose exec slave-db psql -U postgres -d laravel_db -c "\dt persons"
+docker-compose exec slave-db psql -U postgres -d laravel_db -c "SELECT status, conninfo FROM pg_stat_wal_receiver;"
+```
+
+Se o slave não possuir `laravel_db` ou o diretório `postgres-slave/data` estiver corrompido:
+
+```bash
+docker-compose stop slave-db
+rm -rf postgres-slave/data && mkdir -p postgres-slave/data
+docker-compose up -d slave-db
+```
+
+O init script realizará novamente o base backup.
+
+## Rodando testes
+
+```bash
+docker-compose exec app php artisan test
+```
+
+- O teste unitário `tests/Unit/PersonTest.php` valida:
+  - Campos `fillable` do modelo `Person`.
+  - Persistência via factory (`PersonFactory`) usando SQLite. Se o driver `pdo_sqlite` não estiver disponível, o teste é marcado como `skipped`.
+- `tests/Feature/ExampleTest.php` mantém o check básico do endpoint `/`.
+
+## Estrutura relevante
+
+| Caminho                                | Descrição                                                |
+|----------------------------------------|----------------------------------------------------------|
+| `app/Models/Person.php`                | Modelo Eloquent do cadastro de pessoas (`nome/telefone`) |
+| `app/Http/Controllers/PersonController.php` | Endpoints REST (`index`, `store`)                    |
+| `database/migrations/*persons*`        | Criação da tabela `persons`                             |
+| `database/factories/PersonFactory.php` | Faker para gerar pessoas                                |
+| `postgres-master/`                     | Configuração do nó primário                             |
+| `postgres-slave/`                      | Scripts e configs do nó réplica                          |
+| `docker-compose.yml`                   | Orquestra app + bancos                                  |
+
+## Troubleshooting
+
+- **404 em todas as rotas**: rebuild/restart após alterar o `dockerfile`, pois o Nginx customizado deve ser regravado (`docker-compose build app && docker-compose up -d app`).
+- **`relation "persons" does not exist`**: rode `php artisan migrate` dentro do container `app` antes de chamar a API.
+- **Erro ao subir o slave (`no such file or directory` no bind mount)**: a pasta `postgres-slave/data` precisa existir no host (`mkdir -p postgres-slave/data`) e estar vazia para que o `pg_basebackup` execute.
+- **Testes de factory pulados**: instale a extensão `pdo_sqlite` no host para executar o teste de persistência localmente (dentro do container oficial ela já está disponível).
+
+---
+
+Qualquer dúvida, abra uma issue ou entre em contato. Boas replicações! 🚀
